@@ -13,7 +13,7 @@ blueprint:
         entity:
           domain: switch
           multiple: true
-  source_url: https://github.com/zeev-mindali/bp
+  source_url: https://github.com/zeev-mindali/bp/blob/main/multi
 
 mode: queued
 max_exceeded: silent
