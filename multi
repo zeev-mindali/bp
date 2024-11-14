@@ -1,0 +1,39 @@
+blueprint:
+  name: Link Multiple Switches
+  description: |
+    ## Link multiple switches together v1.0.1
+
+  domain: automation
+  homeassistant:
+    min_version: 2022.5.0
+  input:
+    switches:
+      name: Switch Entites
+      selector:
+        entity:
+          domain: switch
+          multiple: true
+  source_url: https://github.com/zeev-mindali/bp
+
+mode: queued
+max_exceeded: silent
+
+variables:
+  switches: !input 'switches'
+
+trigger:
+- platform: state
+  entity_id: !input 'switches'
+
+condition:
+- condition: template
+  value_template: '{{ trigger.to_state.state != trigger.from_state.state }}'
+- condition: template
+  value_template: '{{ trigger.to_state.state != "unknown" }}'
+- condition: template
+  value_template: '{{trigger.to_state.context.parent_id is none or (trigger.to_state.context.id != this.context.id and trigger.to_state.context.parent_id != this.context.id) }}'
+
+action:
+- service: homeassistant.turn_{{ trigger.to_state.state }}
+  target:
+    entity_id: '{{ expand(switches) | selectattr("entity_id", "!=", trigger.entity_id) | map(attribute="entity_id") | list }}'
