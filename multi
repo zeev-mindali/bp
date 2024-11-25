@@ -1,39 +1,44 @@
 blueprint:
-  name: Link Multiple Switches
-  description: |
-    ## Link multiple switches together v1.0.1 - zeev mindali
-
+  name: Light Bonding with Brightness Sync
+  description: Bind 2 light entities - zeev mindali
   domain: automation
-  homeassistant:
-    min_version: 2022.5.0
+  source_url: https://github.com/zeev-mindali/bp/edit/main/multi
   input:
-    switches:
-      name: Switch Entites
+    light_1:
+      name: Light 1
       selector:
         entity:
-          domain: switch
-          multiple: true
-  source_url: https://github.com/zeev-mindali/bp/blob/main/multi
-
-mode: queued
-max_exceeded: silent
-
-variables:
-  switches: !input 'switches'
-
+          domain: light
+          
+    light_2:
+      name: Light 2
+      selector:
+        entity:
+          domain: light
+      
 trigger:
-- platform: state
-  entity_id: !input 'switches'
-
-condition:
-- condition: template
-  value_template: '{{ trigger.to_state.state != trigger.from_state.state }}'
-- condition: template
-  value_template: '{{ trigger.to_state.state != "unknown" }}'
-- condition: template
-  value_template: '{{trigger.to_state.context.parent_id is none or (trigger.to_state.context.id != this.context.id and trigger.to_state.context.parent_id != this.context.id) }}'
-
+- entity_id:
+  - !input light_1
+  - !input light_2
+  platform: state
+- entity_id:
+  - !input light_1
+  - !input light_2
+  platform: state
+  attribute: brightness
 action:
-- service: homeassistant.turn_{{ trigger.to_state.state }}
-  target:
-    entity_id: '{{ expand(switches) | selectattr("entity_id", "!=", trigger.entity_id) | map(attribute="entity_id") | list }}'
+- entity_id:
+  - !input light_1
+  - !input light_2
+  service: '{% if trigger.to_state.state == "on" %} light.turn_on {% elif trigger.to_state.state == "off" %} light.turn_off {% endif %}'
+- entity_id:
+  - !input light_1
+  - !input light_2
+  condition: state
+  state: 'on'
+- service: light.turn_on
+  data:
+    brightness: '{{ trigger.to_state.attributes.brightness }}'
+  entity_id:
+    - !input light_1
+    - !input light_2
