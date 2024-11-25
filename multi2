@@ -1,0 +1,44 @@
+blueprint:
+  name: Light Bonding with Brightness Sync
+  description: Bind 2 light entities together to act in unison
+  domain: automation
+  source_url: https://community.home-assistant.io/t/bond-2-light-entities-with-brightness-sync/264492
+  input:
+    light_1:
+      name: Light 1
+      selector:
+        entity:
+          domain: light
+          
+    light_2:
+      name: Light 2
+      selector:
+        entity:
+          domain: light
+      
+trigger:
+- entity_id:
+  - !input light_1
+  - !input light_2
+  platform: state
+- entity_id:
+  - !input light_1
+  - !input light_2
+  platform: state
+  attribute: brightness
+action:
+- entity_id:
+  - !input light_1
+  - !input light_2
+  service: '{% if trigger.to_state.state == "on" %} light.turn_on {% elif trigger.to_state.state == "off" %} light.turn_off {% endif %}'
+- entity_id:
+  - !input light_1
+  - !input light_2
+  condition: state
+  state: 'on'
+- service: light.turn_on
+  data:
+    brightness: '{{ trigger.to_state.attributes.brightness }}'
+  entity_id:
+    - !input light_1
+    - !input light_2
