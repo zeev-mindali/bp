@@ -1,0 +1,46 @@
+blueprint:
+  name: Link On/Off State of Multiple Devices
+  description: |
+    ## Link On/Off State of Multiple Devices v1.2 - zeev mindali
+    1) It triggers not only on a state change, but also every minute, to eliminate a problem with very fast changes on/off with last one not triggering anything and entities become unsincronized.
+    2) It does not trigger when initial entity state is unavailable or unknown. It solves the problem with a ton of zigbee devices firstly sending this status after HA reboot, then sending their real one, trigerring all automations based on the v1 template.
+    3) Fixed log errors
+
+  domain: automation
+  homeassistant:
+    min_version: 2022.5.0
+  input:
+    linked_entities:
+      name: Entities to link
+      selector:
+        entity:
+          multiple: true
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  linked_entities: !input 'linked_entities'
+
+trigger:
+- platform: state
+  entity_id: !input 'linked_entities'
+- platform: time_pattern
+  minutes: /1
+
+condition:
+- condition: template
+  value_template: '{{ trigger.from_state.state != "unavailable" }}'
+- condition: template
+  value_template: '{{ trigger.from_state.state != "unknown" }}'
+- condition: template
+  value_template: '{{ trigger.to_state.state != trigger.from_state.state }}'
+- condition: template
+  value_template: '{{ (trigger.to_state.state == "on") or (trigger.to_state.state == "off") }}'
+- condition: template
+  value_template: '{{trigger.to_state.context.parent_id is none or (trigger.to_state.context.id != this.context.id and trigger.to_state.context.parent_id != this.context.id) }}'
+
+action:
+- service: homeassistant.turn_{{ trigger.to_state.state }}
+  target:
+    entity_id: '{{ expand(linked_entities) | selectattr("entity_id", "!=", trigger.entity_id) | map(attribute="entity_id") | list }}'
